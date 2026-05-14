@@ -1,143 +1,110 @@
 import dao.*;
 import models.*;
+import views.LoginView;
+
 import java.sql.Connection;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- Demuestra en consola los siguientes Requerimientos Funcionales:
- 
- RF-01 — Login con usuario y contraseña
- RF-02 — Registrar nuevo producto
- RF-05 — Buscar producto por código y por nombre
- RF-06 — Registrar cliente (incluye validación de DNI duplicado)
- RF-07 — Registrar venta (con verificación de stock)
- RF-08 — Actualizar stock automáticamente tras la venta
- RF-09 — Calcular total automáticamente
- RF-13 — Mostrar alertas de stock mínimo
- RF-10 — Reporte de ventas por rango de fechas
- RF-15 — Historial de ventas por cliente
+ * Punto de entrada del sistema Librería Isabel.
+ *
+ * ① Ejecuta la demo en consola (RF-01, RF-02, RF-05, RF-06, RF-07/08/09, RF-13, RF-10)
+ * ② Lanza la interfaz gráfica Swing
  */
 public class Main {
 
     public static void main(String[] args) {
 
-        // ── Conexión centralizada ─────────────────────────────────────────────
+        // ═══════════════════════════════════════════════════════════════
+        // DEMO EN CONSOLA — demuestra los RF con datos reales
+        // ═══════════════════════════════════════════════════════════════
         Connection conn = ConexionDB.getConexion();
         if (conn == null) {
-            System.out.println("No se pudo establecer conexión. Verifique ConexionDB.java");
+            System.out.println("Sin conexión a la BD. Verifique ConexionDB.java y que MySQL esté activo.");
             return;
         }
 
-        // ── Instanciar DAOs ───────────────────────────────────────────────────
         UsuarioDAO  usuarioDAO  = new UsuarioDAO(conn);
         ProductoDAO productoDAO = new ProductoDAO(conn);
         ClienteDAO  clienteDAO  = new ClienteDAO(conn);
         VentaDAO    ventaDAO    = new VentaDAO(conn);
 
-        separador("DEMO SISTEMA — LIBRERÍA ISABEL");
+        sep("DEMO — SISTEMA LIBRERÍA ISABEL");
 
-        // ════════════════════════════════════════════════════════════════════
-        // RF-01 — Login con credenciales correctas e incorrectas
-        // ════════════════════════════════════════════════════════════════════
-        separador("RF-01: Login");
+        // ── RF-01: Login ─────────────────────────────────────────────────
+        sep("RF-01 | Login");
+        Usuario sesion = usuarioDAO.login("admin", "admin123");       // correcto
+        usuarioDAO.login("admin", "clave_incorrecta");                // incorrecto (CA-01.2)
 
-        Usuario sesion = usuarioDAO.login("admin", "admin123");   // Correcto
-        usuarioDAO.login("admin", "clave_incorrecta");            // Incorrecto (CA-01.2)
-        usuarioDAO.login("inexistente", "1234");                  // Usuario inexistente
+        // ── RF-02: Registrar producto ────────────────────────────────────
+        sep("RF-02 | Registrar Producto");
+        productoDAO.insertar(new Producto(0,"LIB-099","Tijera escolar","Útiles",2.50,30,8));
+        productoDAO.insertar(new Producto(0,"LIB-001","Duplicado","Útiles",1.0,5,2)); // código duplicado
 
-        // ════════════════════════════════════════════════════════════════════
-        // RF-02 — Registrar nuevo producto
-        // ════════════════════════════════════════════════════════════════════
-        separador("RF-02: Registrar Producto");
+        // ── RF-05: Buscar producto ────────────────────────────────────────
+        sep("RF-05 | Buscar Producto");
+        productoDAO.buscarPorCodigo("LIB-001");    // existe
+        productoDAO.buscarPorCodigo("LIB-999");    // no existe (CA-05.2)
+        productoDAO.buscarPorNombre("Cuaderno");   // búsqueda parcial
 
-        Producto nuevoProd = new Producto(0, "LIB-099", "Tijera escolar punta roma",
-                                          "Útiles", 2.50, 30, 8);
-        productoDAO.insertar(nuevoProd);
-
-        // Intento de código duplicado (CA-02.2 adaptado a código único)
-        Producto prodDuplicado = new Producto(0, "LIB-001", "Cuaderno A5", "Útiles", 2.00, 10, 3);
-        productoDAO.insertar(prodDuplicado);
-
-        // ════════════════════════════════════════════════════════════════════
-        // RF-05 — Buscar producto por código y por nombre
-        // ════════════════════════════════════════════════════════════════════
-        separador("RF-05: Buscar Producto");
-
-        productoDAO.buscarPorCodigo("LIB-001");       // Existe (CA-05.1)
-        productoDAO.buscarPorCodigo("LIB-999");       // No existe (CA-05.2)
-        productoDAO.buscarPorNombre("Cuaderno");      // Parcial — puede traer varios
-
-        // ════════════════════════════════════════════════════════════════════
-        // RF-06 — Registrar cliente (CA-06.1 y CA-06.2)
-        // ════════════════════════════════════════════════════════════════════
-        separador("RF-06: Registrar Cliente");
-
-        Cliente nuevoCliente = new Cliente(0, "Ana Torres Vega", "76543210", "998877665");
-        clienteDAO.insertar(nuevoCliente);                        // Éxito (CA-06.1)
-        clienteDAO.insertar(nuevoCliente);                        // DNI duplicado (CA-06.2)
-
+        // ── RF-06: Registrar cliente ──────────────────────────────────────
+        sep("RF-06 | Registrar Cliente");
+        clienteDAO.insertar(new Cliente(0,"Ana Torres Vega","76543210","998877665")); // nuevo
+        clienteDAO.insertar(new Cliente(0,"Ana Torres Vega","76543210","998877665")); // DNI duplicado (CA-06.2)
         clienteDAO.listar();
 
-        // ════════════════════════════════════════════════════════════════════
-        // RF-07 | RF-08 | RF-09 — Registrar venta con descuento de stock
-        // ════════════════════════════════════════════════════════════════════
-        separador("RF-07 + RF-08 + RF-09: Registrar Venta");
+        // ── RF-07 | RF-08 | RF-09: Registrar venta exitosa ───────────────
+        sep("RF-07/08/09 | Registrar Venta (stock suficiente)");
+        String fecha = LocalDate.now().toString();
+        String hora  = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-        // Venta exitosa: cliente id=1, usuario id=1, productos con stock suficiente
-        String fechaHoy = LocalDate.now().toString();
-        String horaAhora = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+        // id_usuario = 1 (admin), id_cliente = 1 (Maria Garcia)
+        Venta venta1 = new Venta(1, sesion != null ? sesion.getId() : 1, fecha, hora);
+        venta1.agregarDetalle(new DetalleVenta(1, 3, 3.50)); // RF-09: total calculado automáticamente
+        venta1.agregarDetalle(new DetalleVenta(3, 2, 4.80));
+        System.out.println("Total calculado (RF-09): S/." + String.format("%.2f", venta1.getTotal()));
+        ventaDAO.registrarVenta(venta1); // registra y descuenta stock (RF-08)
 
-        Venta venta1 = new Venta(1, 1, fechaHoy, horaAhora);
+        // ── RF-07 CA-07.2: Venta con stock insuficiente ───────────────────
+        sep("RF-07 CA-07.2 | Venta con stock insuficiente");
+        Venta venta2 = new Venta(1, 1, fecha, hora);
+        venta2.agregarDetalle(new DetalleVenta(2, 50, 1.20)); // Lapicero solo tiene 3 en stock
+        ventaDAO.registrarVenta(venta2); // debe rechazarse
 
-        // RF-09: el subtotal se calcula automáticamente en agregarDetalle()
-        DetalleVenta d1 = new DetalleVenta(1, 3, 3.50);  // id_producto=1, qty=3, precio=3.50
-        DetalleVenta d2 = new DetalleVenta(3, 2, 4.80);  // id_producto=3, qty=2, precio=4.80
-        venta1.agregarDetalle(d1);
-        venta1.agregarDetalle(d2);
-
-        System.out.println("Total calculado automáticamente (RF-09): S/." +
-                           String.format("%.2f", venta1.getTotal()));
-        ventaDAO.registrarVenta(venta1);  // Éxito (CA-07.1)
-
-        // Venta fallida: stock insuficiente para el producto id=2 (stock=3, pedido=10)
-        separador("RF-07 CA-07.2: Venta con stock insuficiente");
-        Venta venta2 = new Venta(1, 1, fechaHoy, horaAhora);
-        venta2.agregarDetalle(new DetalleVenta(2, 10, 1.20)); // Lapicero: solo 3 en stock
-        ventaDAO.registrarVenta(venta2);  // Debe rechazarse (CA-07.2)
-
-        // ════════════════════════════════════════════════════════════════════
-        // RF-11 — Inventario con marcador de alerta visual
-        // ════════════════════════════════════════════════════════════════════
-        separador("RF-11: Inventario Completo");
+        // ── RF-11 + RF-13: Inventario y alertas de stock ──────────────────
+        sep("RF-11 | Inventario completo");
         productoDAO.listar();
-
-        // ════════════════════════════════════════════════════════════════════
-        // RF-13 — Alerta de stock mínimo
-        // ════════════════════════════════════════════════════════════════════
-        separador("RF-13: Alerta de Stock Mínimo");
+        sep("RF-13 | Alertas de stock mínimo");
         productoDAO.listarConAlertaStock();
 
-        // ════════════════════════════════════════════════════════════════════
-        // RF-10 — Reporte de ventas por rango de fechas
-        // ════════════════════════════════════════════════════════════════════
-        separador("RF-10: Reporte de Ventas por Fecha");
-        ventaDAO.reporteVentasPorFecha("2025-01-01", fechaHoy);
+        // ── RF-10: Reporte de ventas por fecha ────────────────────────────
+        sep("RF-10 | Reporte de Ventas");
+        var filas = ventaDAO.reporteVentasPorFecha("2025-01-01", fecha);
+        System.out.printf("%-5s %-12s %-8s %-25s %-12s %-10s%n",
+            "ID","FECHA","HORA","CLIENTE","VENDEDOR","TOTAL");
+        System.out.println("-".repeat(76));
+        filas.forEach(f -> System.out.printf("%-5s %-12s %-8s %-25s %-12s %-10s%n",
+            f[0],f[1],f[2],f[3],f[4],f[5]));
 
-        // ════════════════════════════════════════════════════════════════════
-        // RF-15 — Historial de compras por cliente
-        // ════════════════════════════════════════════════════════════════════
-        separador("RF-15: Historial de Compras — Cliente ID=1");
-        ventaDAO.historialPorCliente(1);
+        // ── RF-15: Historial por cliente ──────────────────────────────────
+        sep("RF-15 | Historial del Cliente ID=1");
+        var hist = ventaDAO.historialPorCliente(1);
+        hist.forEach(f -> System.out.printf("Venta#%-3s %s  %-30s x%s  %s  %s%n",
+            f[0],f[1],f[3],f[4],f[5],f[6]));
 
-        separador("FIN DE LA DEMO");
+        sep("FIN DEMO — Iniciando interfaz gráfica...");
+
+        // ═══════════════════════════════════════════════════════════════
+        // LANZAR INTERFAZ GRÁFICA SWING
+        // ═══════════════════════════════════════════════════════════════
+        javax.swing.SwingUtilities.invokeLater(() -> new LoginView().setVisible(true));
     }
 
-    // ── Utilidad para separar secciones visualmente ───────────────────────
-    private static void separador(String titulo) {
-        System.out.println("\n" + "═".repeat(65));
+    private static void sep(String titulo) {
+        System.out.println("\n" + "═".repeat(60));
         System.out.println("  " + titulo);
-        System.out.println("═".repeat(65));
+        System.out.println("═".repeat(60));
     }
 }

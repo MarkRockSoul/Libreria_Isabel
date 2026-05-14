@@ -1,18 +1,60 @@
-## Getting Started
+# Sistema Librería Isabel — Instrucciones de ejecución
+## Requisitos
+- Java 17 o superior
+- MySQL 8.x activo en localhost:3306
+- mysql-connector-j-8.0.33.jar (colocar en carpeta `lib/`)
 
-Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
+## Paso 1 — Base de datos
+Abrir MySQL Workbench (o consola) y ejecutar:
+```
+libreria_isabel.sql
+```
 
-## Folder Structure
+## Paso 2 — Configurar conexión
+Editar `src/dao/ConexionDB.java`:
+```java
+private static final String USUARIO  = "root";   // su usuario MySQL
+private static final String PASSWORD = "root";   // su contraseña MySQL
+```
 
-The workspace contains two folders by default, where:
+## Paso 3 — Compilar (desde la raíz del proyecto)
+**Windows:**
+```
+javac -cp ".;lib/mysql-connector-j-8.0.33.jar" src/models/*.java src/dao/*.java src/controllers/*.java src/views/*.java src/Main.java -d bin
+```
+**Linux/Mac:**
+```
+javac -cp ".:lib/mysql-connector-j-8.0.33.jar" src/models/*.java src/dao/*.java src/controllers/*.java src/views/*.java src/Main.java -d bin
+```
 
-- `src`: the folder to maintain sources
-- `lib`: the folder to maintain dependencies
+## Paso 4 — Ejecutar
+**Windows:**
+```
+java -cp ".;lib/mysql-connector-j-8.0.33.jar;bin" Main
+```
+**Linux/Mac:**
+```
+java -cp ".:lib/mysql-connector-j-8.0.33.jar:bin" Main
+```
 
-Meanwhile, the compiled output files will be generated in the `bin` folder by default.
+## Estructura del proyecto
+```
+libreria_isabel/
+├── lib/
+│   └── mysql-connector-j-8.0.33.jar
+├── src/
+│   ├── models/        (Usuario, Producto, Cliente, DetalleVenta, Venta)
+│   ├── dao/           (ConexionDB, UsuarioDAO, ProductoDAO, ClienteDAO, VentaDAO)
+│   ├── controllers/   (ProductoController, VentaController)
+│   ├── views/         (LoginView, MainMenuView, ProductosView, VentaView, ReportesView)
+│   └── Main.java
+├── bin/               (clases compiladas — se genera automáticamente)
+├── libreria_isabel.sql
+└── README.md
+```
 
-> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
-
-## Dependency Management
-
-The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+## Credenciales de prueba
+| Usuario    | Contraseña | Rol            |
+|------------|-----------|----------------|
+| admin      | admin123  | administrador  |
+| vendedor1  | vend123   | vendedor       |
