@@ -1,90 +1,125 @@
 package models;
 
-// RF-02 | RF-03 | RF-04 | RF-05 | RF-08 | RF-11 | RF-13 — Entidad Producto
 public class Producto {
-
-    private int    id;
+    private int idProducto;
     private String codigo;
     private String nombre;
     private String categoria;
     private double precio;
-    private int    stockActual;
-    private int    stockMinimo;
+    private int stock;
+    private int stockMinimo;
 
-    public Producto() {}
+    // Constructores
+    public Producto() {
+    }
 
-    public Producto(int id, String codigo, String nombre, String categoria,
-                    double precio, int stockActual, int stockMinimo) {
-        setId(id);
+    public Producto(int idProducto, String codigo, String nombre, String categoria, 
+                    double precio, int stock, int stockMinimo) {
+        setIdProducto(idProducto);
         setCodigo(codigo);
         setNombre(nombre);
         setCategoria(categoria);
         setPrecio(precio);
-        setStockActual(stockActual);
+        setStock(stock);
         setStockMinimo(stockMinimo);
     }
 
-    // ── Getters y Setters con validación ─────────────────────────────────────
-
-    public int getId() { return id; }
-
-    public void setId(int id) {
-        if (id < 0) throw new IllegalArgumentException("El id no puede ser negativo.");
-        this.id = id;
+    // Getters y Setters
+    public int getIdProducto() {
+        return idProducto;
     }
 
-    public String getCodigo() { return codigo; }
+    public void setIdProducto(int idProducto) {
+        this.idProducto = idProducto;
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
 
     public void setCodigo(String codigo) {
-        if (codigo == null || codigo.trim().isEmpty())
-            throw new IllegalArgumentException("El código del producto no puede estar vacío.");
-        this.codigo = codigo.trim();
+        if (codigo == null || codigo.trim().isEmpty()) {
+            throw new IllegalArgumentException("El código del producto no puede estar vacío");
+        }
+        this.codigo = codigo;
     }
 
-    public String getNombre() { return nombre; }
+    public String getNombre() {
+        return nombre;
+    }
 
     public void setNombre(String nombre) {
-        if (nombre == null || nombre.trim().isEmpty())
-            throw new IllegalArgumentException("El nombre del producto no puede estar vacío.");
-        this.nombre = nombre.trim();
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del producto no puede estar vacío");
+        }
+        this.nombre = nombre;
     }
 
-    public String getCategoria() { return categoria; }
+    public String getCategoria() {
+        return categoria;
+    }
 
-    public void setCategoria(String categoria) { this.categoria = categoria; }
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
 
-    public double getPrecio() { return precio; }
+    public double getPrecio() {
+        return precio;
+    }
 
     public void setPrecio(double precio) {
-        if (precio <= 0)
-            throw new IllegalArgumentException("El precio debe ser mayor a 0.");
+        if (precio <= 0) {
+            throw new IllegalArgumentException("El precio debe ser mayor a 0");
+        }
         this.precio = precio;
     }
 
-    public int getStockActual() { return stockActual; }
-
-    public void setStockActual(int stockActual) {
-        if (stockActual < 0)
-            throw new IllegalArgumentException("El stock actual no puede ser negativo.");
-        this.stockActual = stockActual;
+    public int getStock() {
+        return stock;
     }
 
-    public int getStockMinimo() { return stockMinimo; }
+    public void setStock(int stock) {
+        if (stock < 0) {
+            throw new IllegalArgumentException("El stock no puede ser negativo");
+        }
+        this.stock = stock;
+    }
+
+    public int getStockMinimo() {
+        return stockMinimo;
+    }
 
     public void setStockMinimo(int stockMinimo) {
-        if (stockMinimo < 0)
-            throw new IllegalArgumentException("El stock mínimo no puede ser negativo.");
+        if (stockMinimo < 0) {
+            throw new IllegalArgumentException("El stock mínimo no puede ser negativo");
+        }
         this.stockMinimo = stockMinimo;
     }
 
-    // RF-13 — Devuelve true si el stock actual está en nivel de alerta
-    public boolean tieneAlertaStock() {
-        return stockActual <= stockMinimo;
+    /**
+     * Valida si hay stock suficiente para una cantidad solicitada
+     */
+    public boolean validarStock(int cantidadSolicitada) {
+        return this.stock >= cantidadSolicitada;
+    }
+
+    /**
+     * Verifica si el producto necesita reabastecimiento
+     */
+    public boolean necesitaReabastecimiento() {
+        return this.stock <= this.stockMinimo;
     }
 
     @Override
     public String toString() {
-        return "Producto{id=" + id + ", codigo=" + codigo + ", nombre=" + nombre +
-               ", precio=" + precio + ", stock=" + stockActual + "/" + stockMinimo + "}";
+        return "Producto{" +
+                "idProducto=" + idProducto +
+                ", codigo='" + codigo + '\'' +
+                ", nombre='" + nombre + '\'' +
+                ", categoria='" + categoria + '\'' +
+                ", precio=" + precio +
+                ", stock=" + stock +
+                ", stockMinimo=" + stockMinimo +
+                '}';
     }
 }

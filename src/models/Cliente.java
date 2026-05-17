@@ -1,54 +1,72 @@
 package models;
 
-// RF-06 | RF-15 — Entidad Cliente
 public class Cliente {
-
-    private int    id;
-    private String nombre;
+    private int idCliente;
     private String dni;
+    private String nombre;
     private String telefono;
 
-    public Cliente() {}
+    // Constructores
+    public Cliente() {
+    }
 
-    public Cliente(int id, String nombre, String dni, String telefono) {
-        setId(id);
-        setNombre(nombre);
+    public Cliente(int idCliente, String dni, String nombre, String telefono) {
+        setIdCliente(idCliente);
         setDni(dni);
+        setNombre(nombre);
         setTelefono(telefono);
     }
 
-    // ── Getters y Setters con validación ─────────────────────────────────────
-
-    public int getId() { return id; }
-
-    public void setId(int id) {
-        if (id < 0) throw new IllegalArgumentException("El id no puede ser negativo.");
-        this.id = id;
+    // Getters y Setters
+    public int getIdCliente() {
+        return idCliente;
     }
 
-    public String getNombre() { return nombre; }
-
-    public void setNombre(String nombre) {
-        if (nombre == null || nombre.trim().isEmpty())
-            throw new IllegalArgumentException("El nombre del cliente no puede estar vacío.");
-        this.nombre = nombre.trim();
+    public void setIdCliente(int idCliente) {
+        this.idCliente = idCliente;
     }
 
-    public String getDni() { return dni; }
+    public String getDni() {
+        return dni;
+    }
 
     public void setDni(String dni) {
-        if (dni == null || dni.trim().length() != 8)
-            throw new IllegalArgumentException("El DNI debe tener exactamente 8 dígitos.");
-        this.dni = dni.trim();
+        if (dni == null || dni.length() != 8 || !dni.matches("\\d+")) {
+            throw new IllegalArgumentException("El DNI debe tener exactamente 8 dígitos numéricos");
+        }
+        this.dni = dni;
     }
 
-    public String getTelefono() { return telefono; }
+    public String getNombre() {
+        return nombre;
+    }
 
-    public void setTelefono(String telefono) { this.telefono = telefono; }
+    public void setNombre(String nombre) {
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del cliente no puede estar vacío");
+        }
+        this.nombre = nombre;
+    }
+
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
+    public boolean validarDNI() {
+        return dni != null && dni.matches("\\d{8}");
+    }
 
     @Override
     public String toString() {
-        return "Cliente{id=" + id + ", nombre=" + nombre + ", dni=" + dni +
-               ", telefono=" + telefono + "}";
+        return "Cliente{" +
+                "idCliente=" + idCliente +
+                ", dni='" + dni + '\'' +
+                ", nombre='" + nombre + '\'' +
+                ", telefono='" + telefono + '\'' +
+                '}';
     }
 }

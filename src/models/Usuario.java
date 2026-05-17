@@ -1,57 +1,100 @@
 package models;
 
-// RF-01 | RF-12 — Entidad Usuario
 public class Usuario {
+    private int idUsuario;
+    private String nombreUsuario;
+    private String password;
+    private String rol; // ADMINISTRADOR o VENDEDOR
+    private String nombres;
+    private String apellidos;
 
-    private int    id;
-    private String usuario;
-    private String contrasena;
-    private String rol;   // "administrador" o "vendedor"
+    // Constructores
+    public Usuario() {
+    }
 
-    public Usuario() {}
-
-    public Usuario(int id, String usuario, String contrasena, String rol) {
-        setId(id);
-        setUsuario(usuario);
-        setContrasena(contrasena);
+    public Usuario(int idUsuario, String nombreUsuario, String password, String rol, 
+                   String nombres, String apellidos) {
+        setIdUsuario(idUsuario);
+        setNombreUsuario(nombreUsuario);
+        setPassword(password);
         setRol(rol);
+        setNombres(nombres);
+        setApellidos(apellidos);
     }
 
-    // ── Getters y Setters con validación ─────────────────────────────────────
-
-    public int getId() { return id; }
-
-    public void setId(int id) {
-        if (id < 0) throw new IllegalArgumentException("El id no puede ser negativo.");
-        this.id = id;
+    // Getters y Setters
+    public int getIdUsuario() {
+        return idUsuario;
     }
 
-    public String getUsuario() { return usuario; }
-
-    public void setUsuario(String usuario) {
-        if (usuario == null || usuario.trim().isEmpty())
-            throw new IllegalArgumentException("El nombre de usuario no puede estar vacío.");
-        this.usuario = usuario.trim();
+    public void setIdUsuario(int idUsuario) {
+        this.idUsuario = idUsuario;
     }
 
-    public String getContrasena() { return contrasena; }
-
-    public void setContrasena(String contrasena) {
-        if (contrasena == null || contrasena.isEmpty())
-            throw new IllegalArgumentException("La contraseña no puede estar vacía.");
-        this.contrasena = contrasena;
+    public String getNombreUsuario() {
+        return nombreUsuario;
     }
 
-    public String getRol() { return rol; }
+    public void setNombreUsuario(String nombreUsuario) {
+        if (nombreUsuario == null || nombreUsuario.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre de usuario no puede estar vacío");
+        }
+        this.nombreUsuario = nombreUsuario;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        if (password == null || password.length() < 4) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos 4 caracteres");
+        }
+        this.password = password;
+    }
+
+    public String getRol() {
+        return rol;
+    }
 
     public void setRol(String rol) {
-        if (!rol.equals("administrador") && !rol.equals("vendedor"))
-            throw new IllegalArgumentException("Rol inválido. Use 'administrador' o 'vendedor'.");
+        if (!rol.equals("ADMINISTRADOR") && !rol.equals("VENDEDOR")) {
+            throw new IllegalArgumentException("Rol inválido. Debe ser ADMINISTRADOR o VENDEDOR");
+        }
         this.rol = rol;
+    }
+
+    public String getNombres() {
+        return nombres;
+    }
+
+    public void setNombres(String nombres) {
+        this.nombres = nombres;
+    }
+
+    public String getApellidos() {
+        return apellidos;
+    }
+
+    public void setApellidos(String apellidos) {
+        this.apellidos = apellidos;
+    }
+
+    public String getNombreCompleto() {
+        return nombres + " " + apellidos;
+    }
+
+    public boolean validarPassword(String password) {
+        return this.password.equals(password);
     }
 
     @Override
     public String toString() {
-        return "Usuario{id=" + id + ", usuario=" + usuario + ", rol=" + rol + "}";
+        return "Usuario{" +
+                "idUsuario=" + idUsuario +
+                ", nombreUsuario='" + nombreUsuario + '\'' +
+                ", rol='" + rol + '\'' +
+                ", nombreCompleto='" + getNombreCompleto() + '\'' +
+                '}';
     }
 }

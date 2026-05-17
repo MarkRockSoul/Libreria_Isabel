@@ -1,148 +1,177 @@
 package dao;
 
-import models.DetalleVenta;
-import models.Producto;
-import models.Venta;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import models.DetalleVenta;
+import models.Venta;
 
 public class VentaDAO {
-
     private Connection conexion;
 
-    public VentaDAO(Connection conn) { this.conexion = conn; }
+    public VentaDAO(Connection conn) {
+        this.conexion = conn;
+    }
 
-    // RF-07 | RF-08 | RF-09 — Registrar venta completa con transacción
-    public boolean registrarVenta(Venta venta) {
-        ProductoDAO productoDAO = new ProductoDAO(conexion);
-
-        for (DetalleVenta det : venta.getDetalles()) {
-            Producto p = buscarProductoPorId(det.getIdProducto());
-            if (p == null) {
-                System.out.println("✗ Producto id=" + det.getIdProducto() + " no existe.");
-                return false;
-            }
-            if (p.getStockActual() < det.getCantidad()) {
-                System.out.println("✗ Stock insuficiente: " + p.getNombre()
-                        + " | disponible=" + p.getStockActual()
-                        + " | solicitado=" + det.getCantidad());
-                return false;
-            }
-        }
-
+    /**
+     * RF-07, RF-08, RF-09: Registra una venta completa con sus detalles
+     * y actualiza el stock automáticamente
+     */
+    public boolean registrarVenta(Venta venta, List<DetalleVenta> detalles) {
+        String queryVenta = "INSERT INTO ventas (fecha, total, id_cliente, id_usuario) VALUES (?, ?, ?, ?)";
+        String queryDetalle = "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)";
+        String queryActualizarStock = "UPDATE productos SET stock = stock - ? WHERE id_producto = ?";
+        
         try {
+            // Deshabilitar autocommit para transacción
             conexion.setAutoCommit(false);
-
-            String qVenta = "INSERT INTO ventas (id_cliente,id_usuario,fecha,hora,total) VALUES(?,?,?,?,?)";
-            int idVenta;
-            try (PreparedStatement ps = conexion.prepareStatement(qVenta, Statement.RETURN_GENERATED_KEYS)) {
-                ps.setInt(1,    venta.getIdCliente());
-                ps.setInt(2,    venta.getIdUsuario());
-                ps.setString(3, venta.getFecha());
-                ps.setString(4, venta.getHora());
-                ps.setDouble(5, venta.getTotal());
-                ps.executeUpdate();
-                try (ResultSet keys = ps.getGeneratedKeys()) {
-                    if (!keys.next()) throw new SQLException("Sin clave generada.");
-                    idVenta = keys.getInt(1);
-                    venta.setId(idVenta);
+            
+            // 1. Insertar la venta
+            PreparedStatement psVenta = conexion.prepareStatement(queryVenta, Statement.RETURN_GENERATED_KEYS);
+            psVenta.setTimestamp(1, new Timestamp(venta.getFecha().getTime()));
+            psVenta.setDouble(2, venta.getTotal());
+            psVenta.setInt(3, venta.getIdCliente());
+            psVenta.setInt(4, venta.getIdUsuario());
+            
+            int filasVenta = psVenta.executeUpdate();
+            
+            if (filasVenta > 0) {
+                ResultSet rs = psVenta.getGeneratedKeys();
+                if (rs.next()) {
+                    int idVenta = rs.getInt(1);
+                    venta.setIdVenta(idVenta);
+                    
+                    // 2. Insertar los detalles y actualizar stock
+                    PreparedStatement psDetalle = conexion.prepareStatement(queryDetalle);
+                    PreparedStatement psStock = conexion.prepareStatement(queryActualizarStock);
+                    
+                    for (DetalleVenta detalle : detalles) {
+                        // Insertar detalle
+                        psDetalle.setInt(1, idVenta);
+                        psDetalle.setInt(2, detalle.getIdProducto());
+                        psDetalle.setInt(3, detalle.getCantidad());
+                        psDetalle.setDouble(4, detalle.getPrecioUnitario());
+                        psDetalle.setDouble(5, detalle.getSubtotal());
+                        psDetalle.executeUpdate();
+                        
+                        // Actualizar stock
+                        psStock.setInt(1, detalle.getCantidad());
+                        psStock.setInt(2, detalle.getIdProducto());
+                        psStock.executeUpdate();
+                    }
+                    
+                    // Confirmar transacción
+                    conexion.commit();
+                    System.out.println("✓ Venta registrada exitosamente - ID: " + idVenta + " | Total: S/. " + String.format("%.2f", venta.getTotal()));
+                    return true;
                 }
             }
-
-            String qDet = "INSERT INTO detalle_venta(id_venta,id_producto,cantidad,precio_unitario,subtotal) VALUES(?,?,?,?,?)";
-            for (DetalleVenta det : venta.getDetalles()) {
-                det.setIdVenta(idVenta);
-                try (PreparedStatement ps = conexion.prepareStatement(qDet)) {
-                    ps.setInt(1,    idVenta);
-                    ps.setInt(2,    det.getIdProducto());
-                    ps.setInt(3,    det.getCantidad());
-                    ps.setDouble(4, det.getPrecioUnitario());
-                    ps.setDouble(5, det.getSubtotal());
-                    ps.executeUpdate();
-                }
-                Producto p = buscarProductoPorId(det.getIdProducto());
-                productoDAO.actualizarStock(det.getIdProducto(), p.getStockActual() - det.getCantidad(), conexion);
+            
+            conexion.rollback();
+            return false;
+            
+        } catch (SQLException e) {
+            try {
+                conexion.rollback();
+                System.err.println("✗ Error al registrar venta (rollback ejecutado): " + e.getMessage());
+            } catch (SQLException ex) {
+                System.err.println("✗ Error en rollback: " + ex.getMessage());
             }
-
-            conexion.commit();
-            conexion.setAutoCommit(true);
-            System.out.println("✓ Venta #" + idVenta + " registrada. Total S/." + String.format("%.2f", venta.getTotal()));
-            return true;
-
-        } catch (SQLException ex) {
-            System.out.println("✗ Error en venta, revirtiendo: " + ex.getMessage());
-            try { conexion.rollback(); conexion.setAutoCommit(true); } catch (SQLException ignored) {}
+            return false;
+        } finally {
+            try {
+                conexion.setAutoCommit(true);
+            } catch (SQLException e) {
+                System.err.println("✗ Error al restaurar autocommit: " + e.getMessage());
+            }
         }
-        return false;
     }
 
-    // RF-10 — Reporte de ventas por rango de fechas
-    public List<String[]> reporteVentasPorFecha(String desde, String hasta) {
-        List<String[]> filas = new ArrayList<>();
-        String q = "SELECT v.id, v.fecha, v.hora, c.nombre AS cliente, u.usuario, v.total "
-                 + "FROM ventas v "
-                 + "JOIN clientes c ON v.id_cliente=c.id "
-                 + "JOIN usuarios u ON v.id_usuario=u.id "
-                 + "WHERE v.fecha BETWEEN ? AND ? ORDER BY v.fecha,v.hora";
-        try (PreparedStatement ps = conexion.prepareStatement(q)) {
-            ps.setString(1, desde);
-            ps.setString(2, hasta);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    filas.add(new String[]{
-                        String.valueOf(rs.getInt("id")),
-                        rs.getString("fecha"),
-                        rs.getString("hora"),
-                        rs.getString("cliente"),
-                        rs.getString("usuario"),
-                        String.format("S/.%.2f", rs.getDouble("total"))
-                    });
-                }
+    /**
+     * RF-10: Lista ventas por fecha específica
+     */
+    public List<Venta> listarVentasPorFecha(Date fecha) {
+        List<Venta> ventas = new ArrayList<>();
+        String query = "SELECT * FROM ventas WHERE DATE(fecha) = ? ORDER BY fecha DESC";
+        
+        try (PreparedStatement ps = conexion.prepareStatement(query)) {
+            ps.setDate(1, new java.sql.Date(fecha.getTime()));
+            ResultSet rs = ps.executeQuery();
+            
+            while (rs.next()) {
+                Venta v = new Venta(
+                    rs.getInt("id_venta"),
+                    rs.getTimestamp("fecha"),
+                    rs.getDouble("total"),
+                    rs.getInt("id_cliente"),
+                    rs.getInt("id_usuario")
+                );
+                ventas.add(v);
             }
-        } catch (SQLException ex) { System.out.println("Error reporte: " + ex.getMessage()); }
-        return filas;
+        } catch (SQLException e) {
+            System.err.println("✗ Error al listar ventas por fecha: " + e.getMessage());
+        }
+        return ventas;
     }
 
-    // RF-15 — Historial de ventas por cliente
-    public List<String[]> historialPorCliente(int idCliente) {
-        List<String[]> filas = new ArrayList<>();
-        String q = "SELECT v.id, v.fecha, v.hora, v.total, "
-                 + "p.nombre AS producto, dv.cantidad, dv.precio_unitario, dv.subtotal "
-                 + "FROM ventas v "
-                 + "JOIN detalle_venta dv ON v.id=dv.id_venta "
-                 + "JOIN productos p ON dv.id_producto=p.id "
-                 + "WHERE v.id_cliente=? ORDER BY v.fecha DESC, v.id";
-        try (PreparedStatement ps = conexion.prepareStatement(q)) {
+    /**
+     * RF-10: Obtiene ventas del día actual
+     */
+    public List<Venta> obtenerVentasDelDia() {
+        return listarVentasPorFecha(new Date(System.currentTimeMillis()));
+    }
+
+    /**
+     * RF-15: Obtiene el historial de compras de un cliente
+     */
+    public List<Venta> obtenerHistorialCliente(int idCliente) {
+        List<Venta> ventas = new ArrayList<>();
+        String query = "SELECT * FROM ventas WHERE id_cliente = ? ORDER BY fecha DESC";
+        
+        try (PreparedStatement ps = conexion.prepareStatement(query)) {
             ps.setInt(1, idCliente);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    filas.add(new String[]{
-                        String.valueOf(rs.getInt("id")),
-                        rs.getString("fecha"),
-                        rs.getString("hora"),
-                        rs.getString("producto"),
-                        String.valueOf(rs.getInt("cantidad")),
-                        String.format("S/.%.2f", rs.getDouble("precio_unitario")),
-                        String.format("S/.%.2f", rs.getDouble("subtotal")),
-                        String.format("S/.%.2f", rs.getDouble("total"))
-                    });
-                }
+            ResultSet rs = ps.executeQuery();
+            
+            while (rs.next()) {
+                Venta v = new Venta(
+                    rs.getInt("id_venta"),
+                    rs.getTimestamp("fecha"),
+                    rs.getDouble("total"),
+                    rs.getInt("id_cliente"),
+                    rs.getInt("id_usuario")
+                );
+                ventas.add(v);
             }
-        } catch (SQLException ex) { System.out.println("Error historial: " + ex.getMessage()); }
-        return filas;
+        } catch (SQLException e) {
+            System.err.println("✗ Error al obtener historial del cliente: " + e.getMessage());
+        }
+        return ventas;
     }
 
-    // Helper: buscar producto por id (para verificar stock)
-    public Producto buscarProductoPorId(int id) {
-        try (PreparedStatement ps = conexion.prepareStatement("SELECT * FROM productos WHERE id=?")) {
-            ps.setInt(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return new Producto(rs.getInt("id"), rs.getString("codigo"),
-                    rs.getString("nombre"), rs.getString("categoria"),
-                    rs.getDouble("precio"), rs.getInt("stock_actual"), rs.getInt("stock_minimo"));
+    /**
+     * Obtiene los detalles de una venta específica
+     */
+    public List<DetalleVenta> obtenerDetallesVenta(int idVenta) {
+        List<DetalleVenta> detalles = new ArrayList<>();
+        String query = "SELECT * FROM detalle_venta WHERE id_venta = ?";
+        
+        try (PreparedStatement ps = conexion.prepareStatement(query)) {
+            ps.setInt(1, idVenta);
+            ResultSet rs = ps.executeQuery();
+            
+            while (rs.next()) {
+                DetalleVenta d = new DetalleVenta(
+                    rs.getInt("id_detalle"),
+                    rs.getInt("id_venta"),
+                    rs.getInt("id_producto"),
+                    rs.getInt("cantidad"),
+                    rs.getDouble("precio_unitario")
+                );
+                detalles.add(d);
             }
-        } catch (SQLException ex) { System.out.println("Error buscar producto: " + ex.getMessage()); }
-        return null;
+        } catch (SQLException e) {
+            System.err.println("✗ Error al obtener detalles de venta: " + e.getMessage());
+        }
+        return detalles;
     }
 }

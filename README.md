@@ -1,60 +1,28 @@
-# Sistema Librería Isabel — Instrucciones de ejecución
-## Requisitos
-- Java 17 o superior
-- MySQL 8.x activo en localhost:3306
-- mysql-connector-j-8.0.33.jar (colocar en carpeta `lib/`)
+# Sistema de Gestión de Ventas - Librería Isabel
 
-## Paso 1 — Base de datos
-Abrir MySQL Workbench (o consola) y ejecutar:
-```
-libreria_isabel.sql
-```
+## Descripción
+Sistema completo de gestión de ventas e inventario desarrollado en Java con interfaz gráfica Swing y base de datos MySQL.
 
-## Paso 2 — Configurar conexión
-Editar `src/dao/ConexionDB.java`:
-```java
-private static final String USUARIO  = "root";   // su usuario MySQL
-private static final String PASSWORD = "root";   // su contraseña MySQL
-```
+## Requisitos del Sistema
 
-## Paso 3 — Compilar (desde la raíz del proyecto)
-**Windows:**
-```
-javac -cp ".;lib/mysql-connector-j-8.0.33.jar" src/models/*.java src/dao/*.java src/controllers/*.java src/views/*.java src/Main.java -d bin
-```
-**Linux/Mac:**
-```
-javac -cp ".:lib/mysql-connector-j-8.0.33.jar" src/models/*.java src/dao/*.java src/controllers/*.java src/views/*.java src/Main.java -d bin
-```
+### Software Necesario
+- **Java JDK 17 o superior**
+- **MySQL Server 8.0 o superior**
+- **MySQL Connector/J 8.0.33** (driver JDBC)
+- **Visual Studio Code** con Extension Pack for Java
 
-## Paso 4 — Ejecutar
-**Windows:**
-```
-java -cp ".;lib/mysql-connector-j-8.0.33.jar;bin" Main
-```
-**Linux/Mac:**
-```
-java -cp ".:lib/mysql-connector-j-8.0.33.jar:bin" Main
-```
+### Hardware Mínimo
+- Procesador: Intel Core i3 o equivalente
+- RAM: 4 GB
+- Disco: 500 MB libres
 
-## Estructura del proyecto
-```
-libreria_isabel/
-├── lib/
-│   └── mysql-connector-j-8.0.33.jar
-├── src/
-│   ├── models/        (Usuario, Producto, Cliente, DetalleVenta, Venta)
-│   ├── dao/           (ConexionDB, UsuarioDAO, ProductoDAO, ClienteDAO, VentaDAO)
-│   ├── controllers/   (ProductoController, VentaController)
-│   ├── views/         (LoginView, MainMenuView, ProductosView, VentaView, ReportesView)
-│   └── Main.java
-├── bin/               (clases compiladas — se genera automáticamente)
-├── libreria_isabel.sql
-└── README.md
-```
+## Instalación
 
-## Credenciales de prueba
-| Usuario    | Contraseña | Rol            |
-|------------|-----------|----------------|
-| admin      | admin123  | administrador  |
-| vendedor1  | vend123   | vendedor       |
+### 1. Configurar la Base de Datos
+
+```bash
+# Iniciar MySQL
+mysql -u root -p
+
+# Ejecutar el script de creación
+source libreria_isabel.sql
